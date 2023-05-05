@@ -1,9 +1,10 @@
-import json, netifaces, socket
+import json, socket, netifaces
 
 with open("constants.json") as f:
     data = json.load(f)
 
 port = data["PORT"]
+message = bytes(data["MESSAGE"], "utf-8")
 
 ips = []
 interfaces = netifaces.interfaces()
@@ -16,10 +17,16 @@ for intr in interfaces:
 print("Potential ip addresses:")
 print(ips)
 print("Establishing connection...")
-message = bytes(data["MESSAGE"], "utf-8")
 for ip in ips:
-    addr = (ip, port)
-    sock.bind(addr)
-    data, address = sock.recvfrom(4096)
-    if data == message:
-        print(s)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(1)  # Set a timeout of 1 second for the socket
+    try:
+        sock.sendto(message, (ip, port))
+        data, address = sock.recvfrom(4096)
+        if data == message:
+            print("Connection established with:", ip)
+            break  # Break out of the loop if connection is successful
+    except socket.timeout:
+        pass  # Ignore timeout errors and try the next IP address
+
+print("All messages sent.")
